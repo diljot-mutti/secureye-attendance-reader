@@ -88,7 +88,13 @@ export default function AttendancePage() {
 
   // Format time to IST time string
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse the date string and create a new date in IST
+    const [datePart, timePart] = dateString.split(" ");
+    const [year, month, day] = datePart.split("-").map(Number);
+    const [hours, minutes, seconds] = timePart.split(":").map(Number);
+
+    // Create date in IST
+    const date = new Date(year, month - 1, day, hours, minutes, seconds);
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
@@ -98,8 +104,16 @@ export default function AttendancePage() {
 
   // Calculate time difference in minutes
   const getTimeDifference = (firstEntry: string, lastEntry: string) => {
-    const first = new Date(firstEntry).getTime();
-    const last = new Date(lastEntry).getTime();
+    const [datePart1, timePart1] = firstEntry.split(" ");
+    const [year1, month1, day1] = datePart1.split("-").map(Number);
+    const [hours1, minutes1, seconds1] = timePart1.split(":").map(Number);
+
+    const [datePart2, timePart2] = lastEntry.split(" ");
+    const [year2, month2, day2] = datePart2.split("-").map(Number);
+    const [hours2, minutes2, seconds2] = timePart2.split(":").map(Number);
+
+    const first = new Date(year1, month1 - 1, day1, hours1, minutes1, seconds1).getTime();
+    const last = new Date(year2, month2 - 1, day2, hours2, minutes2, seconds2).getTime();
     return Math.abs(last - first) / (1000 * 60); // Convert to minutes
   };
 

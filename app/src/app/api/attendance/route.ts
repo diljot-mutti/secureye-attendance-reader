@@ -20,9 +20,9 @@ export async function GET(request: Request) {
       SELECT 
         DATE(timestamp) as date,
         staffId,
-        MIN(timestamp) as first_entry,
-        MAX(timestamp) as last_entry,
-        GROUP_CONCAT(timestamp) as all_entries
+        DATE_FORMAT(MIN(timestamp), '%Y-%m-%d %H:%i:%s') as first_entry,
+        DATE_FORMAT(MAX(timestamp), '%Y-%m-%d %H:%i:%s') as last_entry,
+        GROUP_CONCAT(DATE_FORMAT(timestamp, '%Y-%m-%d %H:%i:%s')) as all_entries
       FROM attendance_logs
       WHERE timestamp BETWEEN ? AND ?
     `;
