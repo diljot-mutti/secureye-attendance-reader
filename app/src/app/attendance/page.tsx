@@ -1,0 +1,215 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Layout from "@/components/Layout";
+import { Staff, MonthYear } from "@/types";
+
+interface AttendanceLog {
+  date: string;
+  staffId: string;
+  first_entry: string;
+  last_entry: string;
+  all_entries: string;
+}
+
+export default function AttendancePage() {
+  const [selectedMonthYear, setSelectedMonthYear] = useState<MonthYear>({
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
+  });
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStaff();
+    fetchAttendanceLogs();
+  }, [selectedMonthYear]);
+
+  const fetchStaff = async () => {
+    try {
+      const response = await fetch("/api/staff");
+      const data = await response.json();
+      setStaff(data);
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+    }
+  };
+
+  const fetchAttendanceLogs = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/attendance?month=${selectedMonthYear.month + 1}&year=${selectedMonthYear.year}`
+      );
+      const data = await response.json();
+      setAttendanceLogs(data);
+    } catch (error) {
+      console.error("Error fetching attendance logs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Generate last 6 months options
+  const getMonthOptions = () => {
+    const options: MonthYear[] = [];
+    const currentDate = new Date();
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      options.push({
+        month: date.getMonth(),
+        year: date.getFullYear(),
+      });
+    }
+    return options;
+  };
+
+  // Get all dates in the selected month
+  const getDatesInMonth = () => {
+    const { month, year } = selectedMonthYear;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  };
+
+  // Format date to DD MMM, YYYY
+  const formatDate = (day: number) => {
+    const { month, year } = selectedMonthYear;
+    const date = new Date(year, month, day);
+    return date.toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Format time to local time string
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  // Calculate time difference in minutes
+  const getTimeDifference = (firstEntry: string, lastEntry: string) => {
+    const first = new Date(firstEntry).getTime();
+    const last = new Date(lastEntry).getTime();
+    return Math.abs(last - first) / (1000 * 60); // Convert to minutes
+  };
+
+  // Get attendance record for a specific staff and date
+  const getAttendanceRecord = (staffId: string, date: string) => {
+    const formattedDate = new Date(date).toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    return attendanceLogs.find(
+      (record) => record.staffId === staffId && formatDate(new Date(record.date).getDate()) === formattedDate
+    );
+  };
+
+  return (
+    <Layout>
+      <div className="w-full bg-white shadow rounded-lg p-4">
+        <h1 className="text-2xl font-bold mb-4 text-gray-900">Attendance Records</h1>
+
+        {/* Month/Year Selector */}
+        <div className="mb-4">
+          <select
+            value={`${selectedMonthYear.year}-${selectedMonthYear.month}`}
+            onChange={(e) => {
+              const [year, month] = e.target.value.split("-").map(Number);
+              setSelectedMonthYear({ month, year });
+            }}
+            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+          >
+            {getMonthOptions().map((option) => (
+              <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
+                {new Date(option.year, option.month).toLocaleString("default", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          </div>
+        )}
+
+        {/* Attendance Grid */}
+        {!loading && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ID</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Name
+                  </th>
+                  {getDatesInMonth().map((day) => (
+                    <th
+                      key={day}
+                      className="px-1 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider"
+                    >
+                      {day}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {staff
+                  .filter((member) => member.active)
+                  .map((member) => (
+                    <tr key={member.id}>
+                      <td className="px-2 py-2 whitespace-nowrap text-gray-900">{member.id}</td>
+                      <td className="px-2 py-2 whitespace-nowrap text-gray-900">{member.staffName}</td>
+                      {getDatesInMonth().map((day) => {
+                        const date = formatDate(day);
+                        const record = getAttendanceRecord(member.id, date);
+                        return (
+                          <td key={day} className="px-1 py-2 whitespace-nowrap text-center">
+                            {record ? (
+                              <div className="group relative">
+                                <div className="text-xs">
+                                  <div className="text-gray-900">{formatTime(record.first_entry)}</div>
+                                  <div
+                                    className={
+                                      getTimeDifference(record.first_entry, record.last_entry) <= 5
+                                        ? "text-red-700"
+                                        : "text-gray-900"
+                                    }
+                                  >
+                                    {formatTime(record.last_entry)}
+                                  </div>
+                                </div>
+                                <div className="absolute z-10 hidden group-hover:block bg-white p-2 rounded shadow-lg border border-gray-200">
+                                  <div className="text-xs text-gray-600">
+                                    All entries for {date}:
+                                    <ul className="mt-1">
+                                      {record.all_entries.split(",").map((entry, index) => (
+                                        <li key={index}>{formatTime(entry)}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+}
