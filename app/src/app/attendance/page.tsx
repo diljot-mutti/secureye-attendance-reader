@@ -12,6 +12,58 @@ interface AttendanceLog {
   all_entries: string;
 }
 
+// Add print-specific styles
+const printStyles = `
+  @media print {
+    @page {
+      size: landscape;
+      margin: 0.5cm;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .print-table {
+      width: auto !important;
+      min-width: auto !important;
+    }
+    .print-table th,
+    .print-table td {
+      padding: 4px !important;
+      font-size: 10px !important;
+    }
+    .print-table th {
+      background-color: #f3f4f6 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .print-table tr {
+      page-break-inside: avoid;
+    }
+    .print-table thead {
+      display: table-header-group;
+    }
+    .print-table .sticky-columns {
+      position: absolute !important;
+      left: 0;
+      background-color: white !important;
+      z-index: 1;
+    }
+    .print-table .sticky-columns-header {
+      position: absolute !important;
+      left: 0;
+      background-color: #f3f4f6 !important;
+      z-index: 2;
+    }
+    .print-table .data-columns {
+      margin-left: 120px;
+    }
+  }
+`;
+
 export default function AttendancePage() {
   const [selectedMonthYear, setSelectedMonthYear] = useState<MonthYear>({
     month: new Date().getMonth(),
@@ -20,6 +72,7 @@ export default function AttendancePage() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [columnsPerPage, setColumnsPerPage] = useState(10);
 
   const fetchStaff = useCallback(async () => {
     try {
@@ -68,11 +121,27 @@ export default function AttendancePage() {
     return options;
   };
 
-  // Get all dates in the selected month
+  // Calculate pagination
   const getDatesInMonth = () => {
     const { month, year } = selectedMonthYear;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     return Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  };
+
+  const getPageCount = () => {
+    const datesInMonth = getDatesInMonth();
+    return Math.ceil(datesInMonth.length / columnsPerPage);
+  };
+
+  const getTotalPages = () => {
+    return getPageCount();
+  };
+
+  const getPaginatedDates = (pageIndex: number) => {
+    const allDates = getDatesInMonth();
+    const start = pageIndex * columnsPerPage;
+    const end = Math.min(start + columnsPerPage, allDates.length);
+    return allDates.slice(start, end);
   };
 
   // Format date to DD MMM, YYYY
@@ -130,13 +199,38 @@ export default function AttendancePage() {
     );
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Layout>
+      <style>{printStyles}</style>
       <div className="w-full bg-white shadow rounded-lg p-2 sm:p-4">
-        <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900">Attendance Records</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Attendance Records</h1>
+          <div className="flex gap-2 no-print">
+            <select
+              value={columnsPerPage}
+              onChange={(e) => setColumnsPerPage(Number(e.target.value))}
+              className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+            >
+              <option value={8}>8 columns per page</option>
+              <option value={10}>10 columns per page</option>
+              <option value={12}>12 columns per page</option>
+              <option value={15}>15 columns per page</option>
+            </select>
+            <button
+              onClick={handlePrint}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Print Table
+            </button>
+          </div>
+        </div>
 
         {/* Month/Year Selector */}
-        <div className="mb-4">
+        <div className="mb-4 no-print">
           <select
             value={`${selectedMonthYear.year}-${selectedMonthYear.month}`}
             onChange={(e) => {
@@ -163,81 +257,91 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* Attendance Grid */}
+        {/* Attendance Grid - Paginated for print */}
         {!loading && (
-          <div className="overflow-x-auto -mx-2 sm:mx-0">
-            <div className="min-w-[800px]">
-              <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-1 sm:px-2 py-2 text-left font-medium text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
-                      ID
-                    </th>
-                    <th className="px-1 sm:px-2 py-2 text-left font-medium text-gray-700 uppercase tracking-wider sticky left-[60px] bg-gray-50 z-10">
-                      Name
-                    </th>
-                    {getDatesInMonth().map((day) => (
+          <div className="overflow-x-auto">
+            {Array.from({ length: getPageCount() }, (_, pageIndex) => (
+              <div key={pageIndex} className={pageIndex > 0 ? "page-break" : ""}>
+                <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm border-collapse print-table mb-10">
+                  <thead>
+                    <tr>
                       <th
-                        key={day}
-                        className="px-1 py-2 text-center font-medium text-gray-700 uppercase tracking-wider"
+                        colSpan={2 + getPaginatedDates(pageIndex).length}
+                        className="px-2 py-3 text-left bg-gray-100 text-gray-900 font-bold"
                       >
-                        {day}
+                        {new Date(selectedMonthYear.year, selectedMonthYear.month).toLocaleString("default", {
+                          month: "long",
+                          year: "numeric",
+                        })}{" "}
+                        - Page {pageIndex + 1} of {getTotalPages()}
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {staff
-                    .filter((member) => member.active)
-                    .map((member) => (
-                      <tr key={member.id}>
-                        <td className="px-1 sm:px-2 py-2 whitespace-nowrap text-gray-900 sticky left-0 bg-white z-10">
-                          {member.id}
-                        </td>
-                        <td className="px-1 sm:px-2 py-2 whitespace-nowrap text-gray-900 sticky left-[60px] bg-white z-10">
-                          {member.staffName}
-                        </td>
-                        {getDatesInMonth().map((day) => {
-                          const date = formatDate(day);
-                          const record = getAttendanceRecord(member.id, date);
-                          return (
-                            <td key={day} className="px-1 py-2 whitespace-nowrap text-center">
-                              {record ? (
-                                <div className="group relative">
-                                  <div className="text-xs">
-                                    <div className="text-gray-900">{formatTime(record.first_entry)}</div>
-                                    <div
-                                      className={
-                                        getTimeDifference(record.first_entry, record.last_entry) <= 5
-                                          ? "text-red-700"
-                                          : "text-gray-900"
-                                      }
-                                    >
-                                      {formatTime(record.last_entry)}
+                    </tr>
+                    <tr className="bg-gray-50">
+                      <th className="px-1 sm:px-2 py-2 text-left font-medium text-gray-700 uppercase tracking-wider">
+                        ID
+                      </th>
+                      <th className="px-1 sm:px-2 py-2 text-left font-medium text-gray-700 uppercase tracking-wider">
+                        Name
+                      </th>
+                      {getPaginatedDates(pageIndex).map((day) => (
+                        <th
+                          key={day}
+                          className="px-1 py-2 text-center font-medium text-gray-700 uppercase tracking-wider"
+                        >
+                          {day}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {staff
+                      .filter((member) => member.active)
+                      .map((member) => (
+                        <tr key={`${pageIndex}-${member.id}`}>
+                          <td className="px-1 sm:px-2 py-2 whitespace-nowrap text-gray-900">{member.id}</td>
+                          <td className="px-1 sm:px-2 py-2 whitespace-nowrap text-gray-900">{member.staffName}</td>
+                          {getPaginatedDates(pageIndex).map((day) => {
+                            const date = formatDate(day);
+                            const record = getAttendanceRecord(member.id, date);
+                            return (
+                              <td key={`${pageIndex}-${day}`} className="px-1 py-2 whitespace-nowrap text-center">
+                                {record ? (
+                                  <div className="group relative">
+                                    <div className="text-xs">
+                                      <div className="text-gray-900">{formatTime(record.first_entry)}</div>
+                                      <div
+                                        className={
+                                          getTimeDifference(record.first_entry, record.last_entry) <= 5
+                                            ? "text-red-700"
+                                            : "text-gray-900"
+                                        }
+                                      >
+                                        {formatTime(record.last_entry)}
+                                      </div>
+                                    </div>
+                                    <div className="absolute z-20 hidden group-hover:block bg-white p-2 rounded shadow-lg border border-gray-200 no-print">
+                                      <div className="text-xs text-gray-600">
+                                        All entries for {date}:
+                                        <ul className="mt-1">
+                                          {record.all_entries.split(",").map((entry, index) => (
+                                            <li key={index}>{formatTime(entry)}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
                                     </div>
                                   </div>
-                                  <div className="absolute z-20 hidden group-hover:block bg-white p-2 rounded shadow-lg border border-gray-200">
-                                    <div className="text-xs text-gray-600">
-                                      All entries for {date}:
-                                      <ul className="mt-1">
-                                        {record.all_entries.split(",").map((entry, index) => (
-                                          <li key={index}>{formatTime(entry)}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         )}
       </div>
