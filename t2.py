@@ -3,6 +3,7 @@ from ctypes import wintypes
 import datetime
 import os
 import platform
+import csv
 
 # === DLL Path ===
 dll_path = r"C:\Program Files (x86)\ONtime\SBXPCDLL.dll"
@@ -196,6 +197,7 @@ def main():
     port = 5005
     password = 123
     machine_number = 1
+    csv_filename = "attendance_log.csv"
 
     print("➡️ Attempting connection...")
     if connect_to_device(ip_address, port, password, machine_number):
@@ -206,16 +208,30 @@ def main():
         if serial_number:
             print(f"🔢 Serial Number: {serial_number}")
 
-        # Read all GLogs
+        # Read all GLogs and write to CSV
         if read_all_glog_data(machine_number, mark_as_read=False):
-            print("📋 Retrieving GLog entries...")
-            for log in get_general_log_data(machine_number):
-                # Updated print statement to use corrected field names
-                print(f"👤 User ID: {log['enroll_number']}, "
-                      f"Timestamp: {log['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}, "
-                      f"Verify Mode: {log['verify_mode']}, "
-                      f"E Mach No: {log['e_machine_number']}, "
-                      f"T Mach No: {log['t_machine_number']}")
+            print(f"📋 Retrieving GLog entries and writing to {csv_filename}...")
+            log_count = 0
+            try:
+                with open(csv_filename, 'w', newline='') as csvfile:
+                    fieldnames = ["User ID", "Timestamp", "Verify Mode"]
+                    writer = csv.writer(csvfile)
+
+                    writer.writerow(fieldnames) # Write header
+
+                    for log in get_general_log_data(machine_number):
+                        timestamp_str = log['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                        writer.writerow([
+                            log['enroll_number'],
+                            timestamp_str,
+                            log['verify_mode']
+                        ])
+                        log_count += 1
+                print(f"✅ Successfully wrote {log_count} entries to {csv_filename}")
+            except IOError as e:
+                print(f"❌ Error writing to CSV file {csv_filename}: {e}")
+            except Exception as e:
+                 print(f"❌ An unexpected error occurred during CSV writing: {e}")
         else:
             print("💥 Failed to read GLogs.")
 
