@@ -86,9 +86,14 @@ export default function AttendancePage() {
     });
   };
 
-  // Format time to local time string
+  // Format time to IST time string
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Kolkata",
+    });
   };
 
   // Calculate time difference in minutes
@@ -104,6 +109,7 @@ export default function AttendancePage() {
       day: "2-digit",
       month: "short",
       year: "numeric",
+      timeZone: "Asia/Kolkata",
     });
     return attendanceLogs.find(
       (record) => record.staffId === staffId && formatDate(new Date(record.date).getDate()) === formattedDate
