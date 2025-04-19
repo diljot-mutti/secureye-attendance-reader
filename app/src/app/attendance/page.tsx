@@ -72,7 +72,7 @@ export default function AttendancePage() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [columnsPerPage, setColumnsPerPage] = useState(10);
+  const [columnsPerPage, setColumnsPerPage] = useState(15);
 
   const fetchStaff = useCallback(async () => {
     try {
