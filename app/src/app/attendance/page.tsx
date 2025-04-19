@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { Staff, MonthYear } from "@/types";
 
@@ -21,12 +21,7 @@ export default function AttendancePage() {
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStaff();
-    fetchAttendanceLogs();
-  }, [selectedMonthYear]);
-
-  const fetchStaff = async () => {
+  const fetchStaff = useCallback(async () => {
     try {
       const response = await fetch("/api/staff");
       const data = await response.json();
@@ -34,9 +29,9 @@ export default function AttendancePage() {
     } catch (error) {
       console.error("Error fetching staff:", error);
     }
-  };
+  }, []);
 
-  const fetchAttendanceLogs = async () => {
+  const fetchAttendanceLogs = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(
@@ -49,7 +44,15 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedMonthYear.month, selectedMonthYear.year]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchStaff();
+      await fetchAttendanceLogs();
+    };
+    fetchData();
+  }, [fetchStaff, fetchAttendanceLogs]);
 
   // Generate last 6 months options
   const getMonthOptions = () => {
