@@ -118,8 +118,8 @@ export default function AttendancePage() {
 
   return (
     <Layout>
-      <div className="w-full bg-white shadow rounded-lg p-4">
-        <h1 className="text-2xl font-bold mb-4 text-gray-900">Attendance Records</h1>
+      <div className="w-full bg-white shadow rounded-lg p-2 sm:p-4">
+        <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900">Attendance Records</h1>
 
         {/* Month/Year Selector */}
         <div className="mb-4">
@@ -129,7 +129,7 @@ export default function AttendancePage() {
               const [year, month] = e.target.value.split("-").map(Number);
               setSelectedMonthYear({ month, year });
             }}
-            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+            className="w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
           >
             {getMonthOptions().map((option) => (
               <option key={`${option.year}-${option.month}`} value={`${option.year}-${option.month}`}>
@@ -151,71 +151,79 @@ export default function AttendancePage() {
 
         {/* Attendance Grid */}
         {!loading && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ID</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Name
-                  </th>
-                  {getDatesInMonth().map((day) => (
-                    <th
-                      key={day}
-                      className="px-1 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider"
-                    >
-                      {day}
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <div className="min-w-[800px]">
+              <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-1 sm:px-2 py-2 text-left font-medium text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                      ID
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {staff
-                  .filter((member) => member.active)
-                  .map((member) => (
-                    <tr key={member.id}>
-                      <td className="px-2 py-2 whitespace-nowrap text-gray-900">{member.id}</td>
-                      <td className="px-2 py-2 whitespace-nowrap text-gray-900">{member.staffName}</td>
-                      {getDatesInMonth().map((day) => {
-                        const date = formatDate(day);
-                        const record = getAttendanceRecord(member.id, date);
-                        return (
-                          <td key={day} className="px-1 py-2 whitespace-nowrap text-center">
-                            {record ? (
-                              <div className="group relative">
-                                <div className="text-xs">
-                                  <div className="text-gray-900">{formatTime(record.first_entry)}</div>
-                                  <div
-                                    className={
-                                      getTimeDifference(record.first_entry, record.last_entry) <= 5
-                                        ? "text-red-700"
-                                        : "text-gray-900"
-                                    }
-                                  >
-                                    {formatTime(record.last_entry)}
+                    <th className="px-1 sm:px-2 py-2 text-left font-medium text-gray-700 uppercase tracking-wider sticky left-[60px] bg-gray-50 z-10">
+                      Name
+                    </th>
+                    {getDatesInMonth().map((day) => (
+                      <th
+                        key={day}
+                        className="px-1 py-2 text-center font-medium text-gray-700 uppercase tracking-wider"
+                      >
+                        {day}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {staff
+                    .filter((member) => member.active)
+                    .map((member) => (
+                      <tr key={member.id}>
+                        <td className="px-1 sm:px-2 py-2 whitespace-nowrap text-gray-900 sticky left-0 bg-white z-10">
+                          {member.id}
+                        </td>
+                        <td className="px-1 sm:px-2 py-2 whitespace-nowrap text-gray-900 sticky left-[60px] bg-white z-10">
+                          {member.staffName}
+                        </td>
+                        {getDatesInMonth().map((day) => {
+                          const date = formatDate(day);
+                          const record = getAttendanceRecord(member.id, date);
+                          return (
+                            <td key={day} className="px-1 py-2 whitespace-nowrap text-center">
+                              {record ? (
+                                <div className="group relative">
+                                  <div className="text-xs">
+                                    <div className="text-gray-900">{formatTime(record.first_entry)}</div>
+                                    <div
+                                      className={
+                                        getTimeDifference(record.first_entry, record.last_entry) <= 5
+                                          ? "text-red-700"
+                                          : "text-gray-900"
+                                      }
+                                    >
+                                      {formatTime(record.last_entry)}
+                                    </div>
+                                  </div>
+                                  <div className="absolute z-20 hidden group-hover:block bg-white p-2 rounded shadow-lg border border-gray-200">
+                                    <div className="text-xs text-gray-600">
+                                      All entries for {date}:
+                                      <ul className="mt-1">
+                                        {record.all_entries.split(",").map((entry, index) => (
+                                          <li key={index}>{formatTime(entry)}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="absolute z-10 hidden group-hover:block bg-white p-2 rounded shadow-lg border border-gray-200">
-                                  <div className="text-xs text-gray-600">
-                                    All entries for {date}:
-                                    <ul className="mt-1">
-                                      {record.all_entries.split(",").map((entry, index) => (
-                                        <li key={index}>{formatTime(entry)}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
