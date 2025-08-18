@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Layout from "@/components/Layout";
 import { Staff, MonthYear } from "@/types";
+import CSVUploadModal from "@/components/CSVUploadModal";
 
 interface AttendanceLog {
   date: string;
@@ -73,6 +74,7 @@ export default function AttendancePage() {
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [columnsPerPage, setColumnsPerPage] = useState(15);
+  const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
 
   const fetchStaff = useCallback(async () => {
     try {
@@ -210,6 +212,12 @@ export default function AttendancePage() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Attendance Records</h1>
           <div className="flex gap-2 no-print">
+            <button
+              onClick={() => setIsCSVModalOpen(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              Upload New Records
+            </button>
             <select
               value={columnsPerPage}
               onChange={(e) => setColumnsPerPage(Number(e.target.value))}
@@ -345,6 +353,16 @@ export default function AttendancePage() {
           </div>
         )}
       </div>
+
+      {/* CSV Upload Modal */}
+      <CSVUploadModal
+        isOpen={isCSVModalOpen}
+        onClose={() => setIsCSVModalOpen(false)}
+        onUploadSuccess={() => {
+          setIsCSVModalOpen(false);
+          fetchAttendanceLogs(); // Refresh attendance data
+        }}
+      />
     </Layout>
   );
 }
