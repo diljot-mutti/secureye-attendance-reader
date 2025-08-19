@@ -149,8 +149,8 @@ export default function AttendancePage() {
   // Format date to DD MMM, YYYY in IST
   const formatDate = (day: number) => {
     const { month, year } = selectedMonthYear;
-    // Create date in IST by adding 5:30 hours (IST offset from UTC)
-    const date = new Date(Date.UTC(year, month, day, 5, 30));
+    // Create date in IST (treat as local since DB is already in IST)
+    const date = new Date(year, month, day);
     return date.toLocaleDateString("en-US", {
       day: "2-digit",
       month: "short",
@@ -165,12 +165,11 @@ export default function AttendancePage() {
     const [year, month, day] = datePart.split("-").map(Number);
     const [hours, minutes, seconds] = timePart.split(":").map(Number);
 
-    // Create date in IST
+    // Create date in IST (treat as local since DB is already in IST)
     const date = new Date(year, month - 1, day, hours, minutes, seconds);
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: "Asia/Kolkata",
     });
   };
 
@@ -191,11 +190,11 @@ export default function AttendancePage() {
 
   // Get attendance record for a specific staff and date
   const getAttendanceRecord = (staffId: string, date: string) => {
+    // Since DB is in IST, treat the date as local
     const formattedDate = new Date(date).toLocaleDateString("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
-      timeZone: "Asia/Kolkata",
     });
     return attendanceLogs.find(
       (record) => record.staffId === staffId && formatDate(new Date(record.date).getDate()) === formattedDate
