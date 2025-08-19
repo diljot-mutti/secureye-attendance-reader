@@ -149,12 +149,12 @@ export default function AttendancePage() {
   // Format date to DD MMM, YYYY in IST
   const formatDate = (day: number) => {
     const { month, year } = selectedMonthYear;
-    const date = new Date(year, month, day);
+    // Create date in IST by adding 5:30 hours (IST offset from UTC)
+    const date = new Date(Date.UTC(year, month, day, 5, 30));
     return date.toLocaleDateString("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
-      timeZone: "Asia/Kolkata",
     });
   };
 
@@ -191,30 +191,15 @@ export default function AttendancePage() {
 
   // Get attendance record for a specific staff and date
   const getAttendanceRecord = (staffId: string, date: string) => {
-    // Parse the date string and create a date in IST
-    const [datePart, timePart] = date.split(" ");
-    const [year, month, day] = datePart.split("-").map(Number);
-    const [hours, minutes, seconds] = timePart.split(":").map(Number);
-
-    // Create date in IST timezone
-    const recordDate = new Date(year, month - 1, day, hours, minutes, seconds);
-    const formattedDate = recordDate.toLocaleDateString("en-US", {
+    const formattedDate = new Date(date).toLocaleDateString("en-US", {
       day: "2-digit",
       month: "short",
       year: "numeric",
       timeZone: "Asia/Kolkata",
     });
-
-    return attendanceLogs.find((record) => {
-      const recordDate = new Date(record.date);
-      const recordFormattedDate = recordDate.toLocaleDateString("en-US", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        timeZone: "Asia/Kolkata",
-      });
-      return record.staffId === staffId && recordFormattedDate === formattedDate;
-    });
+    return attendanceLogs.find(
+      (record) => record.staffId === staffId && formatDate(new Date(record.date).getDate()) === formattedDate
+    );
   };
 
   const handlePrint = () => {
@@ -268,7 +253,6 @@ export default function AttendancePage() {
                 {new Date(option.year, option.month).toLocaleString("default", {
                   month: "long",
                   year: "numeric",
-                  timeZone: "Asia/Kolkata",
                 })}
               </option>
             ))}
@@ -297,7 +281,6 @@ export default function AttendancePage() {
                         {new Date(selectedMonthYear.year, selectedMonthYear.month).toLocaleString("default", {
                           month: "long",
                           year: "numeric",
-                          timeZone: "Asia/Kolkata",
                         })}{" "}
                         - Page {pageIndex + 1} of {getTotalPages()}
                       </th>
