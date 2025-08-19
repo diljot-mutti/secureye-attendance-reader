@@ -12,10 +12,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Month and year are required" }, { status: 400 });
     }
 
-    // Calculate start and end dates for the month in IST
-    // Use UTC to avoid timezone issues since DB is in IST
-    const startDate = new Date(Date.UTC(Number(year), Number(month) - 1, 1, 5, 30));
-    const endDate = new Date(Date.UTC(Number(year), Number(month), 0, 23, 59, 59, 999));
+    // Calculate start and end dates for the month
+    // Since DB is in IST, create dates in local timezone (IST)
+    const startDate = new Date(Number(year), Number(month) - 1, 1);
+    const endDate = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
 
     let query = `
       SELECT 

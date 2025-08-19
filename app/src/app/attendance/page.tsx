@@ -93,6 +93,7 @@ export default function AttendancePage() {
         `/api/attendance?month=${selectedMonthYear.month + 1}&year=${selectedMonthYear.year}`
       );
       const data = await response.json();
+      console.log("Fetched attendance logs:", data);
       setAttendanceLogs(data);
     } catch (error) {
       console.error("Error fetching attendance logs:", error);
@@ -189,16 +190,25 @@ export default function AttendancePage() {
   };
 
   // Get attendance record for a specific staff and date
-  const getAttendanceRecord = (staffId: string, date: string) => {
-    // Since DB is in IST, treat the date as local
-    const formattedDate = new Date(date).toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+  const getAttendanceRecord = (staffId: string, day: number) => {
+    const { month, year } = selectedMonthYear;
+
+    return attendanceLogs.find((record) => {
+      if (record.staffId !== staffId) return false;
+
+      // Parse the record date and compare with the target day
+      // Since DB returns dates as strings, parse them properly
+      const recordDate = new Date(record.date + "T00:00:00");
+
+      // Debug logging
+      console.log(`Looking for day ${day}, month ${month}, year ${year}`);
+      console.log(`Record date: ${record.date}, parsed: ${recordDate.toISOString()}`);
+      console.log(
+        `Match: ${recordDate.getDate() === day && recordDate.getMonth() === month && recordDate.getFullYear() === year}`
+      );
+
+      return recordDate.getDate() === day && recordDate.getMonth() === month && recordDate.getFullYear() === year;
     });
-    return attendanceLogs.find(
-      (record) => record.staffId === staffId && formatDate(new Date(record.date).getDate()) === formattedDate
-    );
   };
 
   const handlePrint = () => {
@@ -310,7 +320,7 @@ export default function AttendancePage() {
                           <td className="px-1 sm:px-2 py-2 whitespace-nowrap text-gray-900">{member.staffName}</td>
                           {getPaginatedDates(pageIndex).map((day) => {
                             const date = formatDate(day);
-                            const record = getAttendanceRecord(member.id, date);
+                            const record = getAttendanceRecord(member.id, day);
                             return (
                               <td key={`${pageIndex}-${day}`} className="px-1 py-2 whitespace-nowrap text-center">
                                 {record ? (
